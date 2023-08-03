@@ -28,7 +28,7 @@ viewer.track_objects('robot', 'box')
 ### SELECT A RENDERING OPTION ###
 
 options = ['to-debug-screen', 'to-numpy-array', 'special-options', 'very-fast']
-option = options[0]
+option = options[1]
 
 print(f'\nUsing rendering option {option}...\n')
 
@@ -47,9 +47,11 @@ for i in range(1000):
         )
     sim.step()
 
+
     # step and render to a debug screen
     if option == 'to-debug-screen':
-        viewer.render('screen')
+        viewer.render('img')  ##changed to img
+
 
     # step and render to a numpy array
     # use open cv to visualize output
@@ -58,6 +60,7 @@ for i in range(1000):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         cv2.waitKey(1)
         cv2.imshow("Open CV Window", img)
+
 
     # rendering with more options
     if option == 'special-options':   
@@ -68,9 +71,11 @@ for i in range(1000):
             hide_grid = True,
             hide_edges = False,
             hide_voxels = False)
+        
 
     # rendering as fast as possible
     if option == 'very-fast':
-        viewer.render('screen', verbose=True)
+        viewer.render('img')
+
 
 cv2.destroyAllWindows()

@@ -6,8 +6,12 @@ from evogym.sim import EvoSim
 from evogym.simulator_cpp import Viewer, Camera
 from evogym.utils import Timer
 
+from evogym import EvoWorld
+import os
+
 
 class EvoViewer():
+
     """
     Visualize an Evolution Gym simulation.
 
@@ -30,7 +34,7 @@ class EvoViewer():
 
         self._has_init_viewer = False
         self._has_init_screen_camera = False
-        self._has_init_img_camera = False
+        self._has_init_img_camera = False ##changing to true throws errors
         self._is_showing_debug_window = False
 
         self._last_rendered = -1
@@ -49,6 +53,7 @@ class EvoViewer():
         self.set_view_size(view_size)
         self.set_resolution(resolution)
         self._voxel_size = 0.1
+
 
     def set_pos(self, pos: Tuple[float, float]) -> None:
         """
@@ -188,7 +193,7 @@ class EvoViewer():
                 self._tracking_lock[arg] = parsed_arg 
 
     def render(self,
-               mode: str ='screen',
+               mode: str ='img',   ##CHANGED 'mode' & ALL 'hide'S
                verbose: bool = False,
                hide_background: bool = False,
                hide_grid: bool = False,
@@ -208,6 +213,7 @@ class EvoViewer():
         Returns:
             Optional[np.ndarray]: if `mode` is set to `img`, will return an image array.
         """
+
 
         accepted_modes = ['screen', 'human', 'img']
         if not mode in accepted_modes:
@@ -402,9 +408,11 @@ class EvoViewer():
         self.img_camera.set_resolution(self.resolution[0], self.resolution[1])
 
     def _init_viewer(self,):
+
         """
         Initializes viewer. Done automatically before rendering.
         """
         if not self._has_init_viewer:
-            self._viewer = Viewer(self._sim)
+            self._viewer = Viewer(self._sim) ##WHERE ERROR comes from
             self._has_init_viewer = True
+
