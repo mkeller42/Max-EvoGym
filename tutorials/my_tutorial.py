@@ -115,7 +115,7 @@ if __name__ == '__main__':
 			
 			print(curRobot.get_name())
 
-			print(worldArray[x["location"][0]][x["location"][1]].get_objects())
+			# print(worldArray[x["location"][0]][x["location"][1]].get_objects())
 
 			#problem occurs here: 'no object named robot'
 			sim = EvoSim(worldArray[x["location"][0]][x["location"][1]])

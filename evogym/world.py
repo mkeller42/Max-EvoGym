@@ -239,6 +239,9 @@ class EvoWorld():
                 print(f'{x%10} ', end='')
             print()
 
+    def get_objects(self) -> Dict:
+        return self.objects
+
 
 class WorldObject():
     """

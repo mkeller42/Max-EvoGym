@@ -122,7 +122,7 @@ def sample_robot(
 
 ### ROBOT PROPERTY CHECKING AND COMPUTATIONS ###
 
-def _is_in_bounds(x: int, y: int, width: int, height: int) -> bool:
+def is_in_bounds(x: int, y: int, width: int, height: int) -> bool:
     """
     Returns whether or not a certain index is within bounds.
 
@@ -160,11 +160,11 @@ def _recursive_search(x: int, y: int, connectivity: np.ndarray, robot: np.ndarra
     connectivity[x][y] = 1
 
     for x_offset in [-1, 1]:
-        if _is_in_bounds(x + x_offset, y, robot.shape[0], robot.shape[1]):
+        if is_in_bounds(x + x_offset, y, robot.shape[0], robot.shape[1]):
             _recursive_search(x + x_offset, y, connectivity, robot)
 
     for y_offset in [-1, 1]:
-        if _is_in_bounds(x, y + y_offset, robot.shape[0], robot.shape[1]):
+        if is_in_bounds(x, y + y_offset, robot.shape[0], robot.shape[1]):
             _recursive_search(x, y + y_offset, connectivity, robot)
 
 def is_connected(robot: np.ndarray) -> bool:
@@ -239,14 +239,14 @@ def get_full_connectivity(robot: np.ndarray) -> np.ndarray:
         nx = x + 1
         ny = y
 
-        if _is_in_bounds(nx, ny, robot.shape[1],
+        if is_in_bounds(nx, ny, robot.shape[1],
                         robot.shape[0]) and robot[ny][nx] != 0:
             out.append([x + robot.shape[1] * y, nx + robot.shape[1] * ny])
 
         nx = x
         ny = y + 1
 
-        if _is_in_bounds(nx, ny, robot.shape[1],
+        if is_in_bounds(nx, ny, robot.shape[1],
                         robot.shape[0]) and robot[ny][nx] != 0:
             out.append([x + robot.shape[1] * y, nx + robot.shape[1] * ny])
 
