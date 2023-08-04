@@ -5,6 +5,7 @@ import random
 import gym
 import evogym.envs
 import randomWorldGen
+import copy
 
 #finds score of given robot
 def scoreChecker(e):  
@@ -32,7 +33,19 @@ def findOpenNeighbors(worldLocation):
 	return possibleSpace
 	##todo: use is_in_bounds from utils.py
 
+def calcFitness(sim):
+	startScore = 0
+	endScore = 0
+	size = 0
+	for i in sim.object_pos_at_time(0, 'robot')[0]:
+		startScore += i
+	for i in sim.object_pos_at_time(100, 'robot')[0]:
+		size += 1
+		endScore += i
+	return (endScore - startScore)/size
+
 def mutate(robot):
+	
 	old_shape = robot["structure"]
 	count = 0
 	while count <= 5000:
@@ -40,7 +53,7 @@ def mutate(robot):
 		robot["structure"][pos] = np.random.randint(0,4)
 		robot["connections"] = get_full_connectivity(robot["structure"])
 
-		if valid(robot) and is_connected(robot["structure"]):
+		if valid(robot):
 			break
 
 		robot["structure"] = old_shape
@@ -98,9 +111,7 @@ if __name__ == '__main__':
 			xloc = x["location"][0]
 			yloc = x["location"][1]
 
-			x["connections"] = get_full_connectivity(x["structure"])
-			##NO IDEA why this has to be here. This is done in mutate function and should be fine. idk
-
+			
 			curRobot = x["base"]
 			curRobot.set_pos(3, 1)
 
@@ -108,16 +119,10 @@ if __name__ == '__main__':
 
 			worldArray[x["location"][0]][x["location"][1]].move_object('robot', 3, 1)
 
-
-			#debugging
-			# print(curRobot.__repr__())
-			# worldArray[x["location"][0]][x["location"][1]].pretty_print()
+			#can't add or change any functions from other files???
+			#problem occurs here: 'no object named robot' (fixed with deepcopy())
+			#there is 100% an object named robot, however, have double, triple checked
 			
-			print(curRobot.get_name())
-
-			# print(worldArray[x["location"][0]][x["location"][1]].get_objects())
-
-			#problem occurs here: 'no object named robot'
 			sim = EvoSim(worldArray[x["location"][0]][x["location"][1]])
 			sim.reset()
 
@@ -129,7 +134,7 @@ if __name__ == '__main__':
 			#this is exactly where the error occurs i think
 
 
-			#actually simming the environmeny
+			#actually simming the environment
 			#how long is 100? i guess i don't know until i can actually see it
 			for i in range(100):
 				sim.set_action(
@@ -141,24 +146,13 @@ if __name__ == '__main__':
 					)
 				sim.step()
 
-				
-
-			startScore = 0
-			endScore = 0
-			for i in sim.object_pos_at_time(0, 'robot')[0]:
-				startScore += i
-			for i in sim.object_pos_at_time(100, 'robot')[0]:
-				endScore += i
-
-			# print ("start:" + str(startScore))
-			# print ("end: " + str(endScore))
-			x["previousScore"] = endScore-startScore
-
+			#calculate fitness
+			x["previousScore"] = calcFitness(sim)
+			#remove robot
 			worldArray[x["location"][0]][x["location"][1]].remove_object('robot')
 
-		
-		aliveRobots.sort(key=scoreChecker, reverse = True)
 
+		aliveRobots.sort(key=scoreChecker, reverse = True)
 		#fossilize bad robots
 		if len(aliveRobots) > 100:
 			# print("paring")
@@ -170,14 +164,16 @@ if __name__ == '__main__':
 	
 
 		print ("Top Score: " + str(aliveRobots[0]["previousScore"]))
-		print ("Top scorer: " + str(aliveRobots[0]["structure"]))
+		print ("Top scorer: \n" + str(aliveRobots[0]["structure"]))
 
 		#reproduce
 		newRobots = []
 		for x in aliveRobots:
 			#I would put this below findng a valid space, but it breaks the program
 			#mutate the robot that is multiplying
-			newRobot = x.copy()
+			newRobot = copy.deepcopy(x)
+			## ^^slow asl, but only way mutate is able to work
+			#regular copy() does not work 100% of the time
 			newRobot = mutate(newRobot)
 
 			#find valid space

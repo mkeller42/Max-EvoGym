@@ -22,7 +22,7 @@ def randomizer(presetWorld, x, y, worldSeed):
 
 	
 	randConstant = 0.5  #frequency of changes (50% at 0.5)
-	random.seed(worldSeed * 100 + x*10 + y) #so one could replicate findings
+	random.seed(worldSeed * 10000 + x*100 + y) #so one could replicate findings
 
 	##add new blocks to envo
 	for i in ground:
@@ -69,7 +69,7 @@ def randomizer(presetWorld, x, y, worldSeed):
 	world = EvoWorld.from_json(os.path.join('random.json'))
 	return world
 
-# unnecessary function but useful
+# unnecessary function but useful for visualizing in terminal
 def visualize(presetWorld):
 	with open('random.json', 'w') as outfile:
 		json.dump(presetWorld, outfile)
