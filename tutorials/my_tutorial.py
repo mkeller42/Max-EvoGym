@@ -1,4 +1,4 @@
-from evogym import WorldObject, EvoWorld, EvoSim, EvoViewer, sample_robot, get_full_connectivity, is_in_bounds, is_connected
+from evogym import WorldObject, EvoWorld, EvoSim, EvoViewer, sample_robot, get_full_connectivity, is_connected
 import os
 import numpy as np
 import random
@@ -22,7 +22,7 @@ def findOpenNeighbors(worldLocation):
 	iy = worldLocation[1]
 	possibleSpace.extend([[ix+1, iy], [ix-1, iy], [ix, iy+1], [ix, iy-1]])
 	for j in possibleSpace:
-		if not(is_in_bounds(j[0], j[1], worldWidth, worldHeight)):
+		if not((0<=j[0]<worldWidth)and(0<=j[1]<worldHeight)):
 			removedSpaces.append(j)
 	for x in removedSpaces: #todo: make this function smaller
 		possibleSpace.remove(x)
@@ -180,7 +180,7 @@ if __name__ == '__main__':
 
 			#find valid space
 			if worldPops[str(x["location"])] > 5:
-				newloc = findOpenNeighbors(x["location"], worldArray)
+				newloc = findOpenNeighbors(x["location"])
 				if newloc == None:
 					continue
 				newRobot["location"] = random.choice(newloc)
