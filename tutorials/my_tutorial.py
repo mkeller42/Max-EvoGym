@@ -16,22 +16,26 @@ def valid(robot):
 			(3 in robot or 4 in robot))
 
 #finds open space for new offspring
-def findOpenNeighbors(worldLocation):
+def findOpenNeighbors(worldLocation, competing, maxSpaces):
 	possibleSpace = []
-	removedSpaces = [] #program needs this to work? idk man
+	removedSpaces = []
 	ix = worldLocation[0]
 	iy = worldLocation[1]
 	possibleSpace.extend([[ix+1, iy], [ix-1, iy], [ix, iy+1], [ix, iy-1]])
 	for j in possibleSpace:
 		if not((0<=j[0]<worldWidth)and(0<=j[1]<worldHeight)):
 			removedSpaces.append(j)
-	for x in removedSpaces: #todo: make this function smaller
+	for x in removedSpaces:
 		possibleSpace.remove(x)
+	removedSpaces = []
 	for j in possibleSpace:
-		if worldPops[str([j[0],j[1]])] > 5 or j in removedSpaces:
-			possibleSpace.remove(j)
+		if len(worldPops[j[0]][j[1]]) >= maxSpaces and competing == False:
+			removedSpaces.append(j)
+	for x in removedSpaces:
+		possibleSpace.remove(x)
+	if len(possibleSpace) == 0:
+		return None
 	return possibleSpace
-	##todo: use is_in_bounds from utils.py
 
 def calcFitness(sim):
 	startScore = 0
@@ -74,133 +78,127 @@ def count_actuators(robot):
 			count += 1
 	return count
 
+def worldPrint(worldArray, scores):
+	for row in range(len(scores)):
+		for i in range(len(scores[0])):
+			scores[row][i] = round(scores[row][i], 2)
+		print(scores[row])
+
+def getWorstScorer(list):
+	worstScore = 10000
+	worstScorer = None
+	worstID = None
+	for i in list:
+		if i["previousScore"] < worstScore:
+			worstScore = i["previousScore"]
+			worstScorer = i
+			worstID = i["id"]
+	return worstScorer, worstID
+
+def robotSim(robot):
+	xloc = robot["location"][0]
+	yloc = robot["location"][1]
+	robot["object"].set_pos(3, 1)
+	worldArray[xloc][yloc].add_object(robot["object"])
+	worldArray[xloc][yloc].move_object('robot', 3, 1)
+
+
+	sim = EvoSim(worldArray[xloc][yloc])
+	sim.reset()
+
+	for i in range(100):
+		curAction = action(robot["object"], sim.get_time())
+		sim.set_action('robot', curAction)
+		sim.step()
+
+	worldArray[xloc][yloc].remove_object('robot')
+	return sim
+
 if __name__ == '__main__':
+
+	globalID = 1
     
-	worldWidth = 5 #seeds for generating each individual world randomly (used together) 
-	worldHeight = 5
-	worldSeed = 4 #seed for generating each entire collection of worlds randomly
-	#!!!currently only properly seeds/randomzies up to 9x9 world size
+	worldWidth = 20 #seeds for generating each individual world randomly (used together) 
+	worldHeight = 20 #maximum size of 99x99!
+	worldSeed = 1 #seed for generating each entire collection of worlds randomly
+
+	maxRobotsPerSpace = 3 #how many robots are allowed to occupy the same space
 
 	worldArray = []
-	worldPops = {}
+	bestScores = []
+	worldPops = []
 
+	#generate random worlds and add them to array worldArray
 	for i in range(worldHeight):
 		worldArray.append([])
+		bestScores.append([])
 		for j in range(worldWidth):
 			world = randomWorldGen.randomizer(os.path.join('world_data', 'my_environment.json'), i+1, j+1, worldSeed)
 			# print ("World: (" + str(i) + "," + str(j) + ") loaded")
 			worldArray[i].append(world)
-			worldPops[str([j, i])] = 0
+			bestScores[i].append(-1.00)
 
 
 	aliveRobots = []
 	fossilizedRobots = []
 	s1Robot = {}
+
+	for i in range(worldHeight):
+		worldPops.append([])
+		for j in range(worldWidth):
+			worldPops[i].append([])
+
 	
 	s1Robot["structure"], s1Robot["connections"] = sample_robot((5,5))
 	s1Robot["location"] = [1,1]
 	s1Robot["previousScore"] = None
+	s1Robot["id"] = 1
 
-	newRobot = WorldObject()
-	newRobot.load_from_array(
+	robObject = WorldObject()
+	robObject.load_from_array(
 		name = 'robot',
 		structure = s1Robot["structure"],
 		connections=s1Robot["connections"])
 
-	# print(newRobot.__repr__())
-	s1Robot["object"] = newRobot
+	# print(robObject.__repr__())
+	s1Robot["object"] = robObject
+
+	curSim = robotSim(s1Robot)
+	s1Robot["previousScore"] = calcFitness(curSim)
 	
 	aliveRobots.append(s1Robot)
-	worldPops[str(s1Robot["location"])] = 1
+	worldPops[1][1].append(s1Robot)
 	
 	simRunTime = 100
 		
 	for t in range(simRunTime):
-
-		#simulate every alive Robot
-		for x in aliveRobots:
-			if not(x["previousScore"] == None):
-				continue
-
-			xloc = x["location"][0]
-			yloc = x["location"][1]
-
-			
-			curRobot = x["object"]
-			curRobot.set_pos(3, 1)
-
-			worldArray[x["location"][0]][x["location"][1]].add_object(curRobot)
-
-			worldArray[x["location"][0]][x["location"][1]].move_object('robot', 3, 1)
-
-			#can't add or change any functions from other files???
-			#problem occurs here: 'no object named robot' (fixed with deepcopy())
-			#there is 100% an object named robot, however, have double, triple checked
-			
-			sim = EvoSim(worldArray[x["location"][0]][x["location"][1]])
-			sim.reset()
-
-			# viewer = EvoViewer(sim)
-			# viewer.track_objects('robot')
-			# viewer.show_debug_window() ##GLFW initilization fails here
-			#goes to viewer.py, then into the function _init_viewer
-			#_init_viewer calls on object Viewer from PythonBindings.cpp?
-			#this is exactly where the error occurs i think
-
-
-			#actually simming the environment
-			#how long is 100? i guess i don't know until i can actually see it
-			for i in range(100):
-				curAction = action(curRobot, sim.get_time())
-				sim.set_action('robot', curAction)
-				sim.step()
-			
-
-			#calculate fitness
-			x["previousScore"] = calcFitness(sim)
-			#remove robot
-			worldArray[x["location"][0]][x["location"][1]].remove_object('robot')
-
-
+		
 		aliveRobots.sort(key=scoreChecker, reverse = True)
-		#fossilize bad robots
+		#fossilize unfit robots (keep population under 50 before reproduction)
 		if len(aliveRobots) > 100:
 			# print("paring")
-			curDead = aliveRobots[50:len(aliveRobots)+1]
-			del aliveRobots[50:len(aliveRobots)+1]
+			curDead = aliveRobots[100:len(aliveRobots)+1]
+			del aliveRobots[100:len(aliveRobots)+1]
 			fossilizedRobots.append(curDead)
 			for i in curDead:
-				worldPops[str([i["location"][0], i["location"][1]])] -= 1
-	
+				for j in range(len(worldPops[i["location"][0]][i["location"][1]])):
+					if worldPops[i["location"][0]][i["location"][1]][j]["id"] == i["id"]:
+						del worldPops[i["location"][0]][i["location"][1]][j]
+						break
+					else:
+						continue
+			for i in worldPops:
+				for j in i:
+					if len(j) > 3:
+						print("TOO MANY: " + str(len(j)))
 
-		print ("Top Score: " + str(aliveRobots[0]["previousScore"]))
-		print ("Top scorer: \n" + str(aliveRobots[0]["structure"]))
-
-		#reproduce
+		#REPRODUCTION
 		newRobots = []
 		for x in aliveRobots:
-			#I would put this below findng a valid space, but it breaks the program
-			#mutate the robot that is multiplying
-			newRobotShape = x["structure"].copy()
-			## ^^slow asl, but only way mutate is able to work
-			#regular copy() does not work 100% of the time
-			newRobotShape = mutate(newRobotShape)
-
-			#find valid space
-			newloc = []
-			if worldPops[str(x["location"])] > 5:
-				newloc = findOpenNeighbors(x["location"])
-				if newloc == None:
-					continue
-			else:
-				newloc.append(x["location"])
 			newRobot = {}
-			newRobot["location"] = random.choice(newloc)
-			newRobot["structure"] = newRobotShape
-			newRobot["connections"] = get_full_connectivity(newRobotShape)
-			newRobot["previousScore"] = None
+			newRobot["structure"] = mutate(x["structure"].copy())
+			newRobot["connections"] = get_full_connectivity(newRobot["structure"])
 
-			#add new worldObject of new robot
 			object = WorldObject()
 			object.load_from_array(
 				name = 'robot',
@@ -208,16 +206,66 @@ if __name__ == '__main__':
 				connections=newRobot["connections"])
 			newRobot["object"] = object
 
+			#find valid space
+			newloc = []
+			if len(worldPops[x["location"][0]][x["location"][1]]) >= maxRobotsPerSpace:
+				newloc = findOpenNeighbors(x["location"], False, maxRobotsPerSpace)
+				if newloc == None:
+					newloc = findOpenNeighbors(x["location"], True, maxRobotsPerSpace)
+					compZone = random.choice(newloc)
+
+					newRobot["location"] = compZone
+					curSim = robotSim(newRobot)
+					newRobot["previousScore"] = calcFitness(curSim)
+					
+					worst, worstID = getWorstScorer(worldPops[compZone[0]][compZone[1]])
+					if newRobot["previousScore"] > worst["previousScore"]:
+						newRobot["location"] = compZone
+
+						for j in range(len(worldPops[compZone[0]][compZone[1]])):
+							if worldPops[compZone[0]][compZone[1]][j]["id"] == worstID:
+								del worldPops[compZone[0]][compZone[1]][j]
+								break
+						
+					else:
+						continue
+				else:
+					newRobot["location"] = random.choice(newloc)
+					curSim = robotSim(newRobot)
+					newRobot["previousScore"] = calcFitness(curSim)
+			else:
+				newRobot["location"] = x["location"]
+				curSim = robotSim(newRobot)
+				newRobot["previousScore"] = calcFitness(curSim)
+			
 			#add object to world
+			globalID += 1
+			newRobot["id"] = globalID
 			newRobots.append(newRobot)
-			worldPops[str(newRobot["location"])] += 1
+			worldPops[newRobot["location"][0]][newRobot["location"][1]].append(newRobot)
+
+			xloc = x["location"][0]
+			yloc = x["location"][1]
+
+			if x["previousScore"] > bestScores[xloc][yloc]:
+				bestScores[xloc][yloc] = x["previousScore"]
+
 		#add new robots to alive list
 		for i in newRobots:
 			aliveRobots.append(i)
+
+		print ("Round: " + str(t))
+		worldPrint(worldArray, bestScores)
+		print ("Top Score: " + str(aliveRobots[0]["previousScore"]))
+		print ("Top scorer: \n" + str(aliveRobots[0]["structure"]))
 
 
 	print ("sim over")
 
 
+
+
 	##THROWS ERROR 
 	# viewer.render('img')
+
+
