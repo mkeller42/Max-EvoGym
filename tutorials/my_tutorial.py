@@ -12,8 +12,8 @@ def scoreChecker(e):
 	return e["previousScore"]
 
 def valid(robot):
-	return (is_connected(robot["structure"]) and
-			(3 in robot["structure"] or 4 in robot["structure"]))
+	return (is_connected(robot) and
+			(3 in robot or 4 in robot))
 
 #finds open space for new offspring
 def findOpenNeighbors(worldLocation):
@@ -39,29 +39,40 @@ def calcFitness(sim):
 	size = 0
 	for i in sim.object_pos_at_time(0, 'robot')[0]:
 		startScore += i
-	for i in sim.object_pos_at_time(100, 'robot')[0]:
+	for i in sim.object_pos_at_time(sim.get_time(), 'robot')[0]:
 		size += 1
 		endScore += i
 	return (endScore - startScore)/size
 
 def mutate(robot):
 	
-	old_shape = robot["structure"]
+	old_shape = robot
 	count = 0
 	while count <= 5000:
 		pos = tuple(np.random.randint(0,4,2))
-		robot["structure"][pos] = np.random.randint(0,4)
-		robot["connections"] = get_full_connectivity(robot["structure"])
+		robot[pos] = np.random.randint(0,4)
 
 		if valid(robot):
 			break
 
-		robot["structure"] = old_shape
+		robot = old_shape
 		count += 1
 	if count > 5000:
 		raise Exception("Can't find a valid mutation after 5000 tries!")
 	return robot
 
+def action(robot, steps):
+	action = []
+	for _ in range(count_actuators(robot)):
+		action.append(np.sin(steps/3 + (_*0.1))+1)
+	return np.array(action)
+
+def count_actuators(robot):
+	count = 0
+	for _x in robot.get_structure().flatten():
+		if _x == 3 or _x == 4:
+			count += 1
+	return count
 
 if __name__ == '__main__':
     
@@ -88,7 +99,7 @@ if __name__ == '__main__':
 	
 	s1Robot["structure"], s1Robot["connections"] = sample_robot((5,5))
 	s1Robot["location"] = [1,1]
-	s1Robot["previousScore"] = 0
+	s1Robot["previousScore"] = None
 
 	newRobot = WorldObject()
 	newRobot.load_from_array(
@@ -97,7 +108,7 @@ if __name__ == '__main__':
 		connections=s1Robot["connections"])
 
 	# print(newRobot.__repr__())
-	s1Robot["base"] = newRobot
+	s1Robot["object"] = newRobot
 	
 	aliveRobots.append(s1Robot)
 	worldPops[str(s1Robot["location"])] = 1
@@ -108,11 +119,14 @@ if __name__ == '__main__':
 
 		#simulate every alive Robot
 		for x in aliveRobots:
+			if not(x["previousScore"] == None):
+				continue
+
 			xloc = x["location"][0]
 			yloc = x["location"][1]
 
 			
-			curRobot = x["base"]
+			curRobot = x["object"]
 			curRobot.set_pos(3, 1)
 
 			worldArray[x["location"][0]][x["location"][1]].add_object(curRobot)
@@ -137,14 +151,10 @@ if __name__ == '__main__':
 			#actually simming the environment
 			#how long is 100? i guess i don't know until i can actually see it
 			for i in range(100):
-				sim.set_action(
-					'robot', 
-					np.random.uniform(
-						low = 0.6,
-						high = 1.6,
-						size=(sim.get_dim_action_space('robot'),))
-					)
+				curAction = action(curRobot, sim.get_time())
+				sim.set_action('robot', curAction)
 				sim.step()
+			
 
 			#calculate fitness
 			x["previousScore"] = calcFitness(sim)
@@ -171,25 +181,32 @@ if __name__ == '__main__':
 		for x in aliveRobots:
 			#I would put this below findng a valid space, but it breaks the program
 			#mutate the robot that is multiplying
-			newRobot = copy.deepcopy(x)
+			newRobotShape = x["structure"].copy()
 			## ^^slow asl, but only way mutate is able to work
 			#regular copy() does not work 100% of the time
-			newRobot = mutate(newRobot)
+			newRobotShape = mutate(newRobotShape)
 
 			#find valid space
+			newloc = []
 			if worldPops[str(x["location"])] > 5:
 				newloc = findOpenNeighbors(x["location"])
 				if newloc == None:
 					continue
-				newRobot["location"] = random.choice(newloc)
+			else:
+				newloc.append(x["location"])
+			newRobot = {}
+			newRobot["location"] = random.choice(newloc)
+			newRobot["structure"] = newRobotShape
+			newRobot["connections"] = get_full_connectivity(newRobotShape)
+			newRobot["previousScore"] = None
 
 			#add new worldObject of new robot
-			base = WorldObject()
-			base.load_from_array(
+			object = WorldObject()
+			object.load_from_array(
 				name = 'robot',
 				structure = newRobot["structure"],
 				connections=newRobot["connections"])
-			newRobot["base"] = base
+			newRobot["object"] = object
 
 			#add object to world
 			newRobots.append(newRobot)
