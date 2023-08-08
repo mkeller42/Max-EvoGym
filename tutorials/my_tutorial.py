@@ -6,6 +6,7 @@ import gym
 import evogym.envs
 import randomWorldGen
 import copy
+import json
 import plotly.express as px
 
 #finds score of given robot
@@ -17,26 +18,22 @@ def valid(robot):
 			(3 in robot or 4 in robot))
 
 #finds open space for new offspring
-def findOpenNeighbors(worldLocation, competing, maxSpaces):
-	possibleSpace = []
-	removedSpaces = []
+def findOpenNeighbors(worldLocation, competing, maxSpaces, worldPops):
+	possibleSpaces = []
+	competingSpaces = []
+	passiveSpaces = []
 	ix = worldLocation[0]
 	iy = worldLocation[1]
-	possibleSpace.extend([[ix+1, iy], [ix-1, iy], [ix, iy+1], [ix, iy-1]])
-	for j in possibleSpace:
-		if not((0<=j[0]<worldWidth)and(0<=j[1]<worldHeight)):
-			removedSpaces.append(j)
-	for x in removedSpaces:
-		possibleSpace.remove(x)
-	removedSpaces = []
-	for j in possibleSpace:
-		if len(worldPops[j[0]][j[1]]) >= maxSpaces and competing == False:
-			removedSpaces.append(j)
-	for x in removedSpaces:
-		possibleSpace.remove(x)
-	if len(possibleSpace) == 0:
-		return None
-	return possibleSpace
+	possibleSpaces.extend([[ix+1, iy], [ix-1, iy], [ix, iy+1], [ix, iy-1]])
+	for j in possibleSpaces:
+		if (0<=j[0]<worldWidth)and(0<=j[1]<worldHeight):
+			competingSpaces.append(j)
+	if (competing == True):
+		return competingSpaces
+	for k in competingSpaces:
+		if (len(worldPops[k[0]][k[1]]) < maxSpaces):
+			passiveSpaces.append(k)
+	return passiveSpaces
 
 def calcFitness(sim):
 	startScore = 0
@@ -50,7 +47,6 @@ def calcFitness(sim):
 	return (endScore - startScore)/size
 
 def mutate(robot):
-	
 	old_shape = robot
 	count = 0
 	while count <= 5000:
@@ -79,11 +75,13 @@ def count_actuators(robot):
 			count += 1
 	return count
 
-def worldPrint(worldArray, scores):
+def worldData(scores):
+	w = []
 	for row in range(len(scores)):
 		for i in range(len(scores[0])):
 			scores[row][i] = round(scores[row][i], 2)
-		print(scores[row])
+		w.append(str(scores[row]))
+	return w
 
 def getWorstScorer(list):
 	worstScore = 10000
@@ -132,12 +130,19 @@ def delDeadRobs(curDead, aliveRobots):
 	for i in curDead:
 		for j in range(len(aliveRobots)):
 			if i['id'] == aliveRobots[j]['id']:
+				fossilizedRobots.append(i)
 				del aliveRobots[j]
 				break
 	
 	curDead = []
 	return curDead, aliveRobots
 	
+def write_json(new_data, filename):
+    desired_dir = "./saved_data"
+    full_path = os.path.join(desired_dir, filename)
+    with open(full_path, 'w') as f:
+        json_string=json.dumps(new_data)
+        f.write(json_string)
 
 if __name__ == '__main__':
 
@@ -162,9 +167,10 @@ if __name__ == '__main__':
 		worldArray.append([])
 		bestScores.append([])
 		for j in range(worldWidth):
-			world = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), i+1, j+1, worldSeed)
+			world = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), i+1, j+1, worldSeed)
 			worldArray[i].append(world)
 			bestScores[i].append(-1.00)
+			world.pretty_print()
 
 	aliveRobots = []
 	fossilizedRobots = []
@@ -195,18 +201,18 @@ if __name__ == '__main__':
 	
 	for t in range(simRunTime):
 		
-		#TURNED OFF for now
-		#fossilize unfit robots (keep population under 50 before reproduction)
-		# if len(aliveRobots) > 200:
-		# 	# print("paring")
-		# 	curDead = aliveRobots[200:len(aliveRobots)+1]
-		# 	del aliveRobots[200:len(aliveRobots)+1]
-		# 	fossilizedRobots.append(curDead)
-		# 	delDeadRobs(curDead, aliveRobots)
-		# 	for i in worldPops:
-		# 		for j in i:
-		# 			if len(j) > 3:
-		# 				print("TOO MANY: " + str(len(j)))
+		# TURNED OFF for now
+		# fossilize unfit robots (keep population under 50 before reproduction)
+		if len(aliveRobots) > 100:
+			# print("paring")
+			curDead = aliveRobots[100:len(aliveRobots)+1]
+			del aliveRobots[100:len(aliveRobots)+1]
+			fossilizedRobots.append(curDead)
+			delDeadRobs(curDead, aliveRobots)
+		for i in worldPops:
+			for j in i:
+				if len(j) > maxRobotsPerSpace:
+					print("TOO MANY: " + str(len(j)))
 		
 
 		#REPRODUCTION
@@ -221,24 +227,20 @@ if __name__ == '__main__':
 			newloc = []
 			if len(worldPops[x["location"][0]][x["location"][1]]) >= maxRobotsPerSpace:
 				#when findOpenNeighbors var==False, does not compete with others
-				newloc = findOpenNeighbors(x["location"], False, maxRobotsPerSpace)
-				if newloc == None:
+				newloc = findOpenNeighbors(x["location"], False, maxRobotsPerSpace, worldPops)
+				if newloc == []:
 					#when True, does compete
-					newloc = findOpenNeighbors(x["location"], True, maxRobotsPerSpace)
+					newloc = findOpenNeighbors(x["location"], True, maxRobotsPerSpace, worldPops)
 					
 					compZone = random.choice(newloc)
 					newRobot = getScore(newRobot, worldArray, compZone)
 					
-					worst, worstID = getWorstScorer(worldPops[compZone[0]][compZone[1]])
-					if newRobot["score"] > worst["score"]:
-						
-						#use id here to find and remove the worst scorer. can't just do remove(), throws error
-						for j in range(len(worldPops[compZone[0]][compZone[1]])):
-							if worldPops[compZone[0]][compZone[1]][j]["id"] == worstID:
-								curDead.append(worldPops[compZone[0]][compZone[1]][j])
-								del worldPops[compZone[0]][compZone[1]][j]
-								break
-					continue
+					if newRobot["score"] > worldPops[compZone[0]][compZone[1]][-1]["score"]:
+						curDead.append(worldPops[compZone[0]][compZone[1]][-1])
+						worldPops[compZone[0]][compZone[1]].pop()
+					else:
+						continue
+					
 				#goes here if: adjacent empty space found
 				else:
 					loc = random.choice(newloc)
@@ -255,8 +257,10 @@ if __name__ == '__main__':
 			newRobot["id"] = globalID
 			newRobots.append(newRobot)
 			worldPops[xloc][yloc].append(newRobot)
+			worldPops[xloc][yloc].sort(key=scoreChecker, reverse = True)
 
-
+			
+			#tracks best scores yet
 			if newRobot["score"] > bestScores[xloc][yloc]:
 				bestScores[xloc][yloc] = newRobot["score"]
 
@@ -268,8 +272,22 @@ if __name__ == '__main__':
 
 		aliveRobots.sort(key=scoreChecker, reverse = True)
 
+		infoDict = {
+			"round": str(t),
+			"totalRobots": str(len(aliveRobots)),
+			"totalDeadRobots": str(len(fossilizedRobots)),
+			"bestScoreWorld": str(worldData(bestScores)),
+			"topScore": str(aliveRobots[0]["score"]),
+			"topRobot": str(aliveRobots[0]["structure"]),
+			"topRobotLocation": str(aliveRobots[0]["location"])
+		}
+		write_json(infoDict, "dataRound" + str(t) + ".json")
+
+
 		print ("Round: " + str(t))
-		worldPrint(worldArray, bestScores)
+		print ("Total Robots: " + str(len(aliveRobots)))
+		for i in worldData(bestScores):
+			print (i)
 		print ("Top Score: " + str(aliveRobots[0]["score"]))
 		print ("Top scorer: \n" + str(aliveRobots[0]["structure"]))
 

@@ -76,13 +76,3 @@ def visualize(presetWorld):
 	world = EvoWorld.from_json(os.path.join('random.json'))
 	world.pretty_print()
 
-
-def main():
-	
-	# world = randomizer(data)
-	# below not requires for program to run, although probably need another few lines to create new json file
-	visualize(world)
-
-
-if __name__ == "__main__":
-    main()
