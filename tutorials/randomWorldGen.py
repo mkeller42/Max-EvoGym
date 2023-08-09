@@ -21,7 +21,7 @@ def randomizer(presetWorld, x, y, worldSeed):
 	removeList = []
 
 	
-	randConstant = 0.5  #frequency of changes (50% at 0.5)
+	randConstant = 0.4  #frequency of changes (50% at 0.5, 40% at 0.4, etc.)
 	random.seed(worldSeed * 10000 + x*100 + y) #so one could replicate findings
 
 	##add new blocks to envo
@@ -53,6 +53,7 @@ def randomizer(presetWorld, x, y, worldSeed):
 		for item in removeList:
 			if (item in connections[key]):
 				connections[key].remove(item)
+				
 	# add connections for new blocks
 	for i in ground:
 		if not(str(i) in connections.keys()):
@@ -67,7 +68,7 @@ def randomizer(presetWorld, x, y, worldSeed):
 	with open('random.json', 'w') as outfile:
 		json.dump(data, outfile)
 	world = EvoWorld.from_json(os.path.join('random.json'))
-	return world
+	return world, data
 
 # unnecessary function but useful for visualizing in terminal
 def visualize(presetWorld):
