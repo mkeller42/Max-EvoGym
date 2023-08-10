@@ -99,6 +99,7 @@ def alt_mutate(robot):
 
 #determines robot actions
 def action(robot, steps):
+	#x = offset, between 0-2pi
 	action = []
 	for _ in range(count_actuators(robot)):
 		action.append(np.sin(steps/3 + (_*0.1))+1)
@@ -256,22 +257,19 @@ if __name__ == '__main__':
 	for i in range(worldHeight):
 		worldArray.append([])
 		bestScores.append([])
+		worldPops.append([])
 		for j in range(worldWidth):
 			if j in env_1_list:
 				world, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
 			elif j in env_2_list:
 				world, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
 			worldArray[i].append(world)
+			worldPops[i].append([])
 			bestScores[i].append(-1.00)
 			worldFile["World [" + str(j) + "," + str(i) + "]"] = dataFile
 			world.pretty_print()
 	write_json(worldFile, "_worlds.json")
-
-	#creating worldPop lists within lists
-	for i in range(worldHeight):
-		worldPops.append([])
-		for j in range(worldWidth):
-			worldPops[i].append([])
+			
 
 	
 	#initial robot
