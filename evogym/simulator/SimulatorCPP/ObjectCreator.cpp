@@ -524,7 +524,7 @@ bool ObjectCreator::read_object_from_array(string object_name, Matrix <double, 1
 			current_index = get_index(x, y);
 
 			if (connected_components[current_index] >= 1) {
-				// cout << "Error: Could not read in object - object must be connected.\n";
+				cout << "Error: Could not read in object - object must be connected.\n";
 				return false;
 			}
 
