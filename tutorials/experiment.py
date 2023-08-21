@@ -105,6 +105,7 @@ def getBestScorer(worldArray, columns, worldHeight):
 		return None
 	return bestScorer.get_structure(), bestScorer.get_genes()
 
+#finds available robot nearby to mix genes with to create offspring
 def getParent(robot, worldArray, maxSpaces):
 	parentRobot = None
 	parentSpaces = findOccupiedSpace(robot.get_location(), worldArray, maxSpaces)
@@ -117,6 +118,7 @@ def getParent(robot, worldArray, maxSpaces):
 
 	return parentRobot
 
+#sims the robot in the world
 def robotSim(robot, world):
 	robot.getWorldObj().set_pos(3, 2)
 	world.add_object(robot.getWorldObj())
@@ -198,6 +200,9 @@ if __name__ == '__main__':
 	
 	for t in range(simRunTime):
 
+		failureRates = []
+		for i in range(worldWidth):
+			failureRates.append([0,0])
 
 		#REPRODUCTION
 		newRobots = []
@@ -230,10 +235,11 @@ if __name__ == '__main__':
 				curSim = robotSim(x, worldArray[x.get_location()[0]][x.get_location()[1]].getEvo())
 
 				#if newRobot's score is better than the curRobot score
+				failureRates[loc[0]][1] += 1
 				if x.get_score() > worldArray[loc[0]][loc[1]].get_score():
-					#remove unfit robot
 					curDead.append(worldArray[loc[0]][loc[1]].getRobot())
 				else:
+					failureRates[loc[0]][0] += 1
 					continue
 				
 			#goes here if: adjacent empty space found
@@ -254,31 +260,34 @@ if __name__ == '__main__':
 
 
 		#create save file of world state
-		infoDict = {
-			"round": str(t),
-			"totalRobots": str(len(aliveRobots)),
-			"totalDeadRobots": str(len(fossilizedRobots)),
-			"bestScoreWorld": str(worldData(worldArray, worldHeight)),
-			"topScore": str(aliveRobots[0].get_score()),
-			"topRobot": str(aliveRobots[0].get_structure()),
-			"topGenes": str(aliveRobots[0].get_genes()),
-			"topRobotLocation": str(aliveRobots[0].get_true_location()),
-			"env_1_BestScorer": str(getBestScorer(worldArray, env_1_list, worldHeight)),
-			"env_2_BestScorer": str(getBestScorer(worldArray, env_2_list, worldHeight))
-		}
-		write_json(infoDict, "dataRound" + str(t) + ".json")
+		if t%10 == 0:
+			infoDict = {
+				"round": str(t),
+				"totalRobots": str(len(aliveRobots)),
+				"totalDeadRobots": str(len(fossilizedRobots)),
+				"bestScoreWorld": str(worldData(worldArray, worldHeight)),
+				"topScore": str(aliveRobots[0].get_score()),
+				"topRobot": str(aliveRobots[0].get_structure()),
+				"topGenes": str(aliveRobots[0].get_genes()),
+				"topRobotLocation": str(aliveRobots[0].get_true_location()),
+				"env_1_BestScorer": str(getBestScorer(worldArray, env_1_list, worldHeight)),
+				"env_2_BestScorer": str(getBestScorer(worldArray, env_2_list, worldHeight)),
+				"scoreWorldData": str(worldData(worldArray, worldHeight)),
+				"failureRateWorldData": str(failureRates)
+			}
+			write_json(infoDict, "dataRound" + str(t) + ".json")
 
 
-		#print select data from each round to terminal
-		print ("Round: " + str(t))
-		print ("Total Robots: " + str(len(aliveRobots)))
-		for i in worldData(worldArray, worldHeight):
-			x = i.copy()
-			x.insert(env_2_list[0], '|')
-			print (x)
-		print ("Top Score: " + str(aliveRobots[0].get_score()))
-		print ("Top Scorer Location: " + str(aliveRobots[0].get_true_location()))
-		print ("Top Scorer: \n" + str(aliveRobots[0].get_structure()))
+			#print select data from each round to terminal
+			print ("Round: " + str(t))
+			print ("Total Robots: " + str(len(aliveRobots)))
+			for i in worldData(worldArray, worldHeight):
+				x = i.copy()
+				x.insert(env_2_list[0], '|')
+				print (x)
+			print ("Top Score: " + str(aliveRobots[0].get_score()))
+			print ("Top Scorer Location: " + str(aliveRobots[0].get_true_location()))
+			print ("Top Scorer: \n" + str(aliveRobots[0].get_structure()))
 
 
 		#code for creating heatmap
