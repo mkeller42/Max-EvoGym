@@ -69,9 +69,19 @@ class Robot():
 				count += 1
 		return count
 
-	def evolvedAction(self, steps, genes, structure):
+	def choiceAction(self, steps, action):
+		if action == "evolve":
+			return self.evolvedAction(steps)
+		elif action == "random":
+			return self.randomAction()
+		elif action == "oscillate":
+			return self.action(steps)
+		else:
+			return ValueError
+
+	def evolvedAction(self, steps):
 		action = []
-		for i in structure:
+		for i in self.structure:
 			for j, val in enumerate(i):
 				if (val == 3) or (val == 4):
 					action.append(np.sin(steps/3 + (i[j] * 0.1))+1)
@@ -81,6 +91,12 @@ class Robot():
 		action = []
 		for _ in range(self.count_actuators()):
 			action.append(np.sin(steps/3 + (_*0.1))+1)
+		return np.array(action)
+	
+	def randomAction(self):
+		action = []
+		for _ in range(self.count_actuators()):
+			action.append(random.uniform(0.6, 1.6))
 		return np.array(action)
 	
 	def valid(self, shape):

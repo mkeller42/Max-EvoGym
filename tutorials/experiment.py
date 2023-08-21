@@ -1,6 +1,7 @@
 from evogym import WorldObject, EvoWorld, EvoSim, EvoViewer, sample_robot, get_full_connectivity, is_connected
 import os
 import numpy as np
+import sys
 import random
 import gym
 import evogym.envs
@@ -10,6 +11,13 @@ import environment
 import json
 import plotly.express as px
 import multiprocessing as mp
+
+
+##IMPORTANT INFO
+##when running program, must put one of three vars after program call to run
+## 1: "evolve": robots will evolve gene sequences to determine movement
+## 2: "oscillate": robots will move on a sin wave and will not evolve movement
+## 3: "random": robots will move completely randomly
 
 #finds score of given robot
 def scoreChecker(e):  
@@ -120,7 +128,7 @@ def robotSim(robot, world):
 
 	for i in range(100):
 		#if want to change how actions are decided, do it here
-		curAction = robot.evolvedAction(sim.get_time(), robot.get_genes(), robot.get_structure())
+		curAction = robot.choiceAction(sim.get_time(), moveMethod)
 		sim.set_action('robot', curAction)
 		sim.step()
 		curScore = calcFitness(sim)
@@ -136,6 +144,8 @@ if __name__ == '__main__':
 
 
 	globalID = 1 #ID variable for keeping track of robots
+	moveMethod = sys.argv[1]
+	
     
 	worldWidth = 16 #seeds for generating each individual world randomly (used together) 
 	worldHeight = 16 #maximum size of 99x99!
@@ -143,7 +153,7 @@ if __name__ == '__main__':
 	robotSeed = 3
 
 	maxRobotsPerSpace = 1 #how many robots are allowed to occupy the same space
-	mutationRate = 1
+	mutationRate = 1 #how often offspring mutate
 
 	simRunTime = 500 #number of rounds the sim will run
 
